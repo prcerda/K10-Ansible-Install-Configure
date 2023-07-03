@@ -1,7 +1,7 @@
 ***Status:** Work-in-progress. Please create issues or pull requests if you have ideas for improvement.*
 
 # **Fully automated Kasten K10 installation and initial basic configuration with Ansible**
-Example of using Ansible to automate the installation and initial Kasten K10 configuration in **Azure Kubernetes Service (AKS)**, including:
+Example of using Ansible to automate the installation and initial Kasten K10 configuration in **Google Cloud Kubernetes Engine (GKE)**, including:
 * EULA agreement
 * Location Profile creation
 * Policy preset samples creation
@@ -22,6 +22,8 @@ This project is an example of an deployment and meant to be used for testing and
 2. [Installing Kasten with Ansible](#Installing-Kasten-with-Ansible)
 3. [Variables](#Variables)
 
+
+
 ## Prerequisites
 To run this project you need to have some software installed and configured: 
 1. A workstation with the next tools installed:
@@ -29,7 +31,7 @@ To run this project you need to have some software installed and configured:
 	- Kubernetes Collection for Ansible
 	- Helm
 	- Kubeconfig file configured and kubectl context selected	
-	- azure cli 
+	- gcloud CLI and gke-gcloud-auth-plugin for use with kubectl
 1. A working [Ansible installation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
 1. A working Kubernetes cluster.  In this project, we will provide the Ansible Playbooks to complete the following tasks:
 	- Installing Kasten K10
@@ -58,14 +60,7 @@ Some deployment variables must be set into the vars files.  Alter the parameters
 | ----------------------- | -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `company`               | `string` | `Demolab`              | Company name for EULA                                                                                                  |
 | `email`                 | `string` | `pcerda@demolab.com`   | E-Mail address for EULA                                                                                                |
-| `tenantID`              | `string` | `aa-431b-b-a7-1012`    | Azure Tenant ID to add Azure Blob                                                                                      |
-| `azureclientID`         | `string` | `aaaaaaaaa`            | Azure Client ID to add Azure Blob                                                                                      |
-| `Azureclientsecret`     | `string` | `aaaaaaaaa`            | Azure Client Secret to add Azure Blob                                                                                  |
-| `azure_storage_key`     | `string` | `aaaaaaaaa`            | Azure Storage Access Key to add Azure Blob                                                                             |
-| `azure_storage_env`     | `string` | `AzureCloud`           | AzureCloud is the default in Azure.  More info in https://docs.kasten.io/latest/usage/configuration.html#azure-storage |
 | `bucket_name`           | `string` | `test-bucket`          | Bucket to be used as Location Profile	                                                                               |
 | `bucket_region`         | `string` | `europe-west2`  		  | Bucket region                           										                                       |
+| `project_id`            | `string` | `gcloud-project-id`    | Google Project ID to add Google Cloud Storage Account                                                                  |
 | `LOGIN`                 | `string` | `admin:$apr1$aa.pY/bb/`| For K10 Basic Authentication.  Use 'htpasswd -n admin' and provide a password to autenticate to Kasten K10             |
-
-
-
