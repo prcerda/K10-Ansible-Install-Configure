@@ -41,7 +41,7 @@ To run this project you need to have some software installed and configured:
 
 
 ## Installing Kasten with Ansible
-* Installin Kasten with Ansible in Azure AKS: [Ansible_K10AKS/README.md](Ansible_K10AKS/README.md)
-* Installin Kasten with Ansible in Amazon EKS: [Ansible_K10EKS/README.md](Ansible_K10EKS/README.md)
-* Installin Kasten with Ansible in Google GKE: [Ansible_K10GKE/README.md](Ansible_K10GKE/README.md)
-* Installin Kasten with Ansible in Tanzu Kubernetes Grid: [Ansible_K10TKG/README.md](Ansible_K10TKG/README.md)
+* Installing Kasten with Ansible in Azure AKS: [Ansible_K10AKS/README.md](Ansible_K10AKS/README.md)
+* Installing Kasten with Ansible in Amazon EKS: [Ansible_K10EKS/README.md](Ansible_K10EKS/README.md)
+* Installing Kasten with Ansible in Google GKE: [Ansible_K10GKE/README.md](Ansible_K10GKE/README.md)
+* Installing Kasten with Ansible in Tanzu Kubernetes Grid: [Ansible_K10TKG/README.md](Ansible_K10TKG/README.md)
