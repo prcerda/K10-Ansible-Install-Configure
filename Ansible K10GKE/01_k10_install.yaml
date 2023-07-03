@@ -1,0 +1,141 @@
+---
+- name: K10 Deploy
+  hosts: localhost
+  vars_files:
+    - vars/vault_vars.yaml
+  vars:
+    helm_chart_url: "https://charts.kasten.io/"
+  collections:
+    - kubernetes.core
+  tasks:
+# Creating the namespace in the kubernete cluster
+    - name: Create Kasten K10 namespace
+      k8s:
+        name: kasten-io # defining the namespace
+        api_version: v1
+        kind: Namespace
+        state: present
+        
+# Adding Helm repository for Kasten K10
+    - name: Add Kasten helm repo
+      kubernetes.core.helm_repository:
+        name: kasten
+        state: present
+        repo_url: '{{ helm_chart_url }}'
+      register: helmrepo
+
+# Installing Kasten K10 for Google Cloud GKE
+    - name: Get Google Cloud Service Account Key
+      shell:
+        "base64 -w0 vars/google-sa-key.json"
+      register: sa_key
+
+    - name: Install Kasten K10 chart
+      kubernetes.core.helm:
+        name: k10
+        namespace: kasten-io
+        chart_ref: kasten/k10
+        wait: True
+        state: present
+        values:
+            secrets:
+                googleApiKey: "{{ sa_key.stdout }}"
+            externalGateway:
+                create: true
+            auth:
+                basicAuth:
+                    enabled: true
+                    htpasswd: "{{ LOGIN }}"
+      when: (sa_key.stdout)
+
+#  Accept EULA
+    - name: Accept Kasten EULA
+      k8s:
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: k10-eula-info
+            namespace: kasten-io
+          data:
+            accepted: "true"
+            company: '{{ company }}'
+            email: '{{ email }}'
+
+# Creating an Location Profile  Secret
+    - name: get Google Storage Account Key
+      shell:
+        "base64 -w0 vars/google-sa-key.json"
+      register: sa_key
+
+    - name: CREATE GCS Storage bucket SECRET
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+          apiVersion: v1
+          kind: Secret
+          type: Opaque             
+          metadata:
+            name: "k10-gcs-{{ bucket_name }}-secret"
+            namespace: kasten-io     
+          data:
+            project-id: "{{ project_id|b64encode }}"
+            service-account.json: "{{ sa_key.stdout }}"            
+      when: (sa_key.stdout)            
+
+# Creating an Location Profile
+    - name: Creating an Location Profile with DR Data
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Profile
+            metadata:
+              name: "profile-gcs-{{ bucket_name }}"
+              namespace: kasten-io
+            spec:
+              type: Location
+              locationSpec:
+                credential:
+                  secretType: GcpServiceAccountKey
+                  secret:
+                    apiVersion: v1
+                    kind: Secret
+                    name: "k10-gcs-{{ bucket_name }}-secret"
+                    namespace: kasten-io
+                type: ObjectStore
+                objectStore:
+                  name: "{{ bucket_name }}"
+                  objectStoreType: GCS 
+                  region: "{{ bucket_region }}"
+
+# Create Policy presets
+    - name: Create Policy Presets from Files
+      kubernetes.core.k8s:
+        definition: "{{ lookup('template', '{{ item }}') | from_yaml }}"
+      with_fileglob:
+          - "policypresets/*.yaml"
+
+# Create Backup Policy for Cluster-wide resources
+    - name: "Create policy for cluster-wide resources"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Policy
+            metadata:
+              name: cluster-backup
+              namespace: kasten-io
+            spec:
+              comment: Backup Policy
+              presetRef:
+                name: daily-policy-preset
+                namespace: kasten-io
+              actions:
+              - action: backup
+              selector:
+                matchExpressions:
+                - key: k10.kasten.io/appNamespace
+                  operator: In
+                  values:
+                  - kasten-io-cluster                

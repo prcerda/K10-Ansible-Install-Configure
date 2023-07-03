@@ -1,0 +1,8 @@
+company: "Demolab" #Company name for EULA
+email: "pcerda@demolab.com"   #E-Mail address for EULA
+bucket_namewasabi:   "kasten-wasabi"  #Bucket to   be used as Location Profile
+bucket_regionwasabi:   "eu-west-2"  #Bucket region
+wasabi_endpoint:   "s3.eu-west-2.wasabisys.com"  #Select the proper endpoint https://docs.wasabi.com/docs/what-are-the-service-urls-for-wasabis-different-storage-regions 
+wasabi_access_key_id:   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+wasabi_secret_access_key:   "bbbbbbbbbbbbbbbbbbbbbbbb"
+LOGIN: "admin:$apr1$aaaaaaaaaaaaaa.pY/bbbbbbbbbbbb/" #For K10 Basic Authentication.  Use 'htpasswd -n admin' and provide a password to autenticate to Kasten K10

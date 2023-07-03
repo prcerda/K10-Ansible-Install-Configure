@@ -1,0 +1,130 @@
+---
+- name: K10 Deploy
+  hosts: localhost
+  vars_files:
+    - vars/vault_vars.yaml
+  vars:
+    helm_chart_url: "https://charts.kasten.io/"
+  collections:
+    - kubernetes.core
+  tasks:
+# Creating the namespace in the kubernete cluster
+    - name: Create Kasten K10 namespace
+      k8s:
+        name: kasten-io # defining the namespace
+        api_version: v1
+        kind: Namespace
+        state: present
+        
+# Adding Helm repository for Kasten K10
+    - name: Add Kasten helm repo
+      kubernetes.core.helm_repository:
+        name: kasten
+        state: present
+        repo_url: '{{ helm_chart_url }}'
+      register: helmrepo
+
+# Installing Kasten K10 for Google Cloud GKE 
+    - name: Install Kasten K10 chart
+      kubernetes.core.helm:
+        name: k10
+        namespace: kasten-io
+        chart_ref: kasten/k10
+        wait: True
+        state: present
+        values:
+            externalGateway:
+                create: true
+            auth:
+                basicAuth:
+                    enabled: true
+                    htpasswd: "{{ LOGIN }}"
+      when: (sa_key.stdout)     
+
+#  Accept EULA
+    - name: Accept Kasten EULA
+      k8s:
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: k10-eula-info
+            namespace: kasten-io
+          data:
+            accepted: "true"
+            company: '{{ company }}'
+            email: '{{ email }}'
+
+
+# Creating an Location Profile Wasabi
+    - name: CREATE WASABI S3 SECRET
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+          apiVersion: v1
+          kind: Secret
+          type: secrets.kanister.io/aws             
+          metadata:
+            name: "k10-wasabi-{{ bucket_namewasabi }}-secret"
+            namespace: kasten-io     
+          data:
+            wasabi_access_key_id: "{{ wasabi_access_key_id|b64encode }}"
+            wasabi_secret_access_key: "{{ wasabi_secret_access_key|b64encode }}"            
+            
+
+    - name: Creating an Location Profile
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Profile
+            metadata:
+              name: "profile-wasabi-{{ bucket_namewasabi }}"
+              namespace: kasten-io
+            spec:
+              type: Location
+              locationSpec:
+                credential:
+                  secretType: AwsAccessKey
+                  secret:
+                    apiVersion: v1
+                    kind: Secret
+                    name: "k10-wasabi-{{ bucket_namewasabi }}-secret"
+                    namespace: kasten-io
+                    endpoint: "{{ wasabi_endpoint }}"
+                type: ObjectStore
+                objectStore:
+                  name: "{{ bucket_namewasabi }}"
+                  objectStoreType: S3
+                  region: "{{ bucket_regionwasabi }}"                                                
+
+# Create Policy presets
+    - name: Create Policy Presets from Files
+      kubernetes.core.k8s:
+        definition: "{{ lookup('template', '{{ item }}') | from_yaml }}"
+      with_fileglob:
+          - "policypresets/*.yaml"
+
+# Create Backup Policy for Cluster-wide resources
+    - name: "Create policy for cluster-wide resources"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Policy
+            metadata:
+              name: cluster-backup
+              namespace: kasten-io
+            spec:
+              comment: Backup Policy
+              presetRef:
+                name: daily-policy-preset
+                namespace: kasten-io
+              actions:
+              - action: backup
+              selector:
+                matchExpressions:
+                - key: k10.kasten.io/appNamespace
+                  operator: In
+                  values:
+                  - kasten-io-cluster                

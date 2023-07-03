@@ -1,0 +1,10 @@
+company: "Demolab" #Company name for EULA
+email: "pcerda@demolab.com"   #E-Mail address for EULA
+bucket_name: "pcerdak10sa"  #Bucket to be used as Location Profile
+bucket_region: "na"  #Bucket region
+LOGIN: "admin:$apr1$aaaaaaaaaaaaaa.pY/bbbbbbbbbbbb/" #For K10 Basic Authentication.  Use 'htpasswd -n admin' and provide a password to autenticate to Kasten K10
+tenantID: "aaaaaaaa-431b-bbbb-add7-123456789012"  #Azure Tenant ID to add Azure Blob
+azureclientID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaa" #Azure Client ID to add Azure Blob
+Azureclientsecret: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" # Azure Client Secret to add Azure Blob
+azure_storage_key: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  #Azure Storage Access Key to add Azure Blob
+azure_storage_env: "AzureCloud"  #AzureCloud is the default in Azure.  More info in https://docs.kasten.io/latest/usage/configuration.html#azure-storage

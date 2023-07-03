@@ -1,0 +1,6 @@
+company: "Demolab" #Company name for EULA
+email: "pcerda@demolab.com"   #E-Mail address for EULA
+bucket_name: "test-bucket"  #Bucket to be used as Location Profile
+bucket_region: "europe-west2"  #Bucket region
+project_id: "gcloud-project-id"  #Google Project ID to add Google Cloud Storage Account
+LOGIN: "admin:$apr1$aaaaaaaaaaaaaa.pY/bbbbbbbbbbbb/" #For K10 Basic Authentication.  Use 'htpasswd -n admin' and provide a password to autenticate to Kasten K10
