@@ -127,4 +127,34 @@
                 - key: k10.kasten.io/appNamespace
                   operator: In
                   values:
-                  - kasten-io-cluster                
+                  - kasten-io-cluster
+                
+#Create sample TransformSet
+    - name: "Create sample transformset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            kind: TransformSet
+            apiVersion: config.kio.kasten.io/v1alpha1
+            metadata:
+              name: sample-dr-transforms
+              creationTimestamp: null
+              namespace: kasten-io
+            spec:
+              comment: |
+                Modify the storageClass to change storage tier.
+              transforms:
+                - subject:
+                    resource: persistentvolumeclaims
+                  name: ChangeStorageClass
+                  json:
+                    - op: replace
+                      path: /spec/storageClassName
+                      value: default
+                - subject:
+                    resource: deployments
+                  name: ScaleDeployment
+                  json:
+                    - op: replace
+                      path: /spec/replicas
+                      value: 1     
