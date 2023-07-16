@@ -8,6 +8,8 @@ Example of using Ansible to automate the installation and initial Kasten K10 con
 * Location Profile creation
 * Policy preset samples creation
 * Policy creation to protect cluster-wide resources
+* Kanister Blueprints creation for MongoDB and PostgreSQL app-consistent backups
+* Kanister BlueprintBinding creation for automatic use of Blueprint (app fingerprinting)
 
 ## Summary
 This projects demostrates the process of installing and configurig Kasten K10 using Ansible for fully automation of this process.  

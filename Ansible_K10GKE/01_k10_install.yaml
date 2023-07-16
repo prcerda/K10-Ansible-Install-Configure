@@ -235,7 +235,7 @@
                       operator: In
                       values:
                         - group: apps
-                          resource: deployment
+                          resource: deployments
                   - annotations:
                       key: kanister.kasten.io/blueprint
                       operator: DoesNotExist
