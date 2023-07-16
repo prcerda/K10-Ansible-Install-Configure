@@ -129,7 +129,7 @@
             spec:
               comment: Backup Policy
               presetRef:
-                name: daily-policy-preset
+                name: silver-policy-preset
                 namespace: kasten-io
               actions:
               - action: backup
@@ -140,16 +140,15 @@
                   values:
                   - kasten-io-cluster                
 
-#Create sample TransformSet
-    - name: "Create sample transformset"
+#Create TransformSet
+    - name: "Create sample TransformSet"
       kubernetes.core.k8s:
         state: present
         definition:
             kind: TransformSet
             apiVersion: config.kio.kasten.io/v1alpha1
             metadata:
-              name: sample-dr-transforms
-              creationTimestamp: null
+              name: dr-transforms
               namespace: kasten-io
             spec:
               comment: |
@@ -161,11 +160,127 @@
                   json:
                     - op: replace
                       path: /spec/storageClassName
-                      value: standard-rwo
+                      value: standard-csi
                 - subject:
                     resource: deployments
                   name: ScaleDeployment
                   json:
                     - op: replace
                       path: /spec/replicas
-                      value: 1     
+                      value: 1                      
+
+#Create BluePrint App Consistent Backups
+    - name: Create Kanister Blueprint for MongoDB
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mongodb_hook_blueprint.yaml
+
+    - name: Create Kanister Blueprint for PostgreSQL
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/postgresql_hook_blueprint.yaml
+
+
+#Create BluePrintBinding
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: blueprintbinding-mongodb-logical
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mongo-hooks
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - "mongodb"
+                  - labels:
+                      key: app.kubernetes.io/managed-by
+                      operator: In
+                      values:
+                        - "Helm"            
+
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: blueprintbinding-mongodb-consistent
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mongo-hooks
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployment
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - "mongodb"
+                  - labels:
+                      key: app.kubernetes.io/managed-by
+                      operator: In
+                      values:
+                        - "Helm"   
+
+    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: blueprintbinding-postgress-consistent
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: postgresql-hooks
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - "postgresql"
+                  - labels:
+                      key: app.kubernetes.io/managed-by
+                      operator: In
+                      values:
+                        - "Helm" 
+

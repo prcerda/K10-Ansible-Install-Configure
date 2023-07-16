@@ -1,12 +1,15 @@
 apiVersion: config.kio.kasten.io/v1alpha1
 kind: PolicyPreset
 metadata:
-  name: weekly-policy-preset
+  name: bronze-policy-preset
   namespace: kasten-io
 spec:
-  comment: Policy preset for daily backup
+  comment: Policy preset for bronze backup
   backup:
     frequency: '@weekly'
+    profile:
+      name: "profile-gcs-{{ bucket_namegcp }}"
+      namespace: kasten-io    
     subFrequency:
       weekdays: [6]
     backupWindow:
@@ -24,7 +27,7 @@ spec:
     exportData:
       enabled: true
     profile:
-      name: "profile-azblob-{{ bucket_name }}"
+      name: "profile-gcs-{{ bucket_namegcp }}"
       namespace: kasten-io
     retention:
       weekly: 4     
