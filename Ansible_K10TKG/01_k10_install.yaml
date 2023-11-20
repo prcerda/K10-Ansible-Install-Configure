@@ -24,7 +24,7 @@
         repo_url: '{{ helm_chart_url }}'
       register: helmrepo
 
-# Installing Kasten K10 for Google Cloud GKE 
+# Installing Kasten K10 for TKG
     - name: Install Kasten K10 chart
       kubernetes.core.helm:
         name: k10
@@ -39,7 +39,6 @@
                 basicAuth:
                     enabled: true
                     htpasswd: "{{ LOGIN }}"
-      when: (sa_key.stdout)     
 
 #  Accept EULA
     - name: Accept Kasten EULA
