@@ -20,11 +20,11 @@ spec:
       monthly: 0
       yearly: 0
     profile:
-      name: "profile-gcs-{{ bucket_namegcp }}"
+      name: "profile-wasabi-{{ bucket_namewasabi }}"
       namespace: kasten-io
   export:
     profile:
-      name: "profile-gcs-{{ bucket_namegcp }}"
+      name: "profile-wasabi-{{ bucket_namewasabi }}"
       namespace: kasten-io
     retention:
       daily: 7

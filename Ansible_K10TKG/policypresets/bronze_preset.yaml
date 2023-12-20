@@ -8,7 +8,7 @@ spec:
   backup:
     frequency: '@weekly'
     profile:
-      name: "profile-gcs-{{ bucket_namegcp }}"
+      name: "profile-wasabi-{{ bucket_namewasabi }}"
       namespace: kasten-io    
     subFrequency:
       weekdays: [6]
@@ -27,7 +27,7 @@ spec:
     exportData:
       enabled: true
     profile:
-      name: "profile-gcs-{{ bucket_namegcp }}"
+      name: "profile-wasabi-{{ bucket_namewasabi }}"
       namespace: kasten-io
     retention:
       weekly: 4     
