@@ -170,43 +170,67 @@
                       value: 1                      
 
 #Create BluePrint App Consistent Backups
-    - name: Create Kanister Blueprint for MongoDB
+    - name: Create Kanister Blueprint for MongoDB Deployment
       kubernetes.core.k8s:
         state: present
-        src: blueprints/mongodb_hook_blueprint.yaml
+        src: blueprints/mongodb_hook_bp_deployment.yaml
 
-    - name: Create Kanister Blueprint for PostgreSQL
+    - name: Create Kanister Blueprint for MongoDB Statefulset
       kubernetes.core.k8s:
         state: present
-        src: blueprints/postgresql_hook_blueprint.yaml
+        src: blueprints/mongodb_hook_bp_statefulset.yaml        
 
-    - name: Create Kanister Blueprint for MariaDB
+    - name: Create Kanister Blueprint for PostgreSQL Deployment
       kubernetes.core.k8s:
         state: present
-        src: blueprints/mariadb_dump_blueprint.yaml
+        src: blueprints/postgresql_hook_bp_deployment.yaml
 
-    - name: Create Kanister Blueprint for MySQL
+    - name: Create Kanister Blueprint for PostgreSQL Statefulset
       kubernetes.core.k8s:
         state: present
-        src: blueprints/mysql_lock_blueprint.yaml 
+        src: blueprints/postgresql_hook_bp_statefulset.yaml
 
+    - name: Create Kanister Blueprint for MariaDB Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mariadb_dump_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for MariaDB Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mariadb_dump_bp_statefulset.yaml
+
+    - name: Create Kanister Blueprint for MySQL Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mysql_lock_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for MySQL Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mysql_lock_bp_statefulset.yaml        
 
 #Create BluePrintBinding
-    - name: "Create BluePrintBinding for MariaDB Consistent Backup"
+    - name: "Create BluePrintBinding for MariaDB Consistent Backup - statefulset"
       kubernetes.core.k8s:
         state: present
         definition:
             apiVersion: config.kio.kasten.io/v1alpha1
             kind: BlueprintBinding
             metadata:
-              name: blueprintbinding-mariadb-consistent
+              name: bpb-mariadb-statefulset
               namespace: kasten-io
             spec:
               blueprintRef:
-                name: maria-blueprint
+                name: mariadb-blueprint-statefulset
                 namespace: kasten-io
               resources:
                 matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
                   - annotations:
                       key: kanister.kasten.io/blueprint
                       operator: DoesNotExist
@@ -214,37 +238,28 @@
                       key: database-type
                       operator: In
                       values:
-                        - mariadb
-                matchAny:
-                  - type:
-                      operator: In
-                      values:
-                        - group: apps
-                          version: ""
-                          resource: deployments
-                  - type:
-                      operator: In
-                      values:
-                        - group: apps
-                          version: ""
-                          resource: statefulsets
+                        - "mariadb"
  
-
-    - name: "Create BluePrintBinding for MongoDB Consistent Backup"
+    - name: "Create BluePrintBinding for MariaDB Consistent Backup - deployment"
       kubernetes.core.k8s:
         state: present
         definition:
             apiVersion: config.kio.kasten.io/v1alpha1
             kind: BlueprintBinding
             metadata:
-              name: blueprintbinding-mongodb-consistent
+              name: bpb-mariadb-deployment
               namespace: kasten-io
             spec:
               blueprintRef:
-                name: mongo-hooks
+                name: mariadb-blueprint-deployment
                 namespace: kasten-io
               resources:
                 matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployments
                   - annotations:
                       key: kanister.kasten.io/blueprint
                       operator: DoesNotExist
@@ -252,38 +267,58 @@
                       key: database-type
                       operator: In
                       values:
-                        - mongodb
-                matchAny:
+                        - "mariadb"
+
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mongodb-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mongo-hooks-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
                   - type:
                       operator: In
                       values:
                         - group: apps
-                          version: ""
-                          resource: deployments
-                  - type:
-                      operator: In
-                      values:
-                        - group: apps
-                          version: ""
                           resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mongodb"
          
 
-
-    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup"
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - deployment"
       kubernetes.core.k8s:
         state: present
         definition:
             apiVersion: config.kio.kasten.io/v1alpha1
             kind: BlueprintBinding
             metadata:
-              name: blueprintbinding-postgress-consistent
+              name: bpb-mongodb-deployment
               namespace: kasten-io
             spec:
               blueprintRef:
-                name: postgresql-hooks
+                name: mongo-hooks-deployment
                 namespace: kasten-io
               resources:
                 matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployments
                   - annotations:
                       key: kanister.kasten.io/blueprint
                       operator: DoesNotExist
@@ -291,37 +326,28 @@
                       key: database-type
                       operator: In
                       values:
-                        - postgresql
-                matchAny:
-                  - type:
-                      operator: In
-                      values:
-                        - group: apps
-                          version: ""
-                          resource: deployments
-                  - type:
-                      operator: In
-                      values:
-                        - group: apps
-                          version: ""
-                          resource: statefulsets
+                        - "mongodb"
 
-
-    - name: "Create BluePrintBinding for MySQL Consistent Backup"
+    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup - statefulset"
       kubernetes.core.k8s:
         state: present
         definition:
             apiVersion: config.kio.kasten.io/v1alpha1
             kind: BlueprintBinding
             metadata:
-              name: blueprintbinding-mysql-consistent
+              name: bpb-postgress-statefulset
               namespace: kasten-io
             spec:
               blueprintRef:
-                name: mysql-lock
+                name: postgresql-hooks-statefulset
                 namespace: kasten-io
               resources:
                 matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
                   - annotations:
                       key: kanister.kasten.io/blueprint
                       operator: DoesNotExist
@@ -329,19 +355,96 @@
                       key: database-type
                       operator: In
                       values:
-                        - mysql
-                matchAny:
+                        - "postgresql"
+
+
+    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-postgress-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: postgresql-hooks-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
                   - type:
                       operator: In
                       values:
                         - group: apps
-                          version: ""
-                          resource: deployments
+                          resource: deployment
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "postgresql"
+
+
+    - name: "Create BluePrintBinding for MySQL Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mysql-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mysql-lock-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
                   - type:
                       operator: In
                       values:
                         - group: apps
-                          version: ""
                           resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mysql"
+
+
+    - name: "Create BluePrintBinding for MySQL Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mysql-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mysql-lock-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployment
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mysql"
 
 

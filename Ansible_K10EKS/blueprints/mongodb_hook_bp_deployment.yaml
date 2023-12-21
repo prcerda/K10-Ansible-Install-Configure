@@ -1,0 +1,68 @@
+kind: Blueprint
+apiVersion: cr.kanister.io/v1alpha1
+metadata:
+  name: mongo-hooks-deployment
+  namespace: kasten-io
+actions:
+  backupPosthook:
+    name: ""
+    kind: ""
+    phases:
+      - func: KubeExec
+        name: unlockMongo
+        objects:
+          mongoDbSecret:
+            apiVersion: ""
+            group: ""
+            resource: ""
+            kind: Secret
+            name: "{{ .Object.metadata.name }}"
+            namespace: "{{ .Deployment.Namespace }}"
+        args:
+          command:
+            - bash
+            - -o
+            - errexit
+            - -o
+            - pipefail
+            - -c
+            - >
+              export MONGODB_ROOT_PASSWORD='{{ index
+              .Phases.unlockMongo.Secrets.mongoDbSecret.Data
+              "mongodb-root-password" | toString }}'
+
+              mongosh --authenticationDatabase admin -u root -p "${MONGODB_ROOT_PASSWORD}" --eval="db.fsyncUnlock()"
+          container: mongodb
+          namespace: "{{ .Deployment.Namespace }}"
+          pod: "{{ index .Deployment.Pods 0 }}"
+  backupPrehook:
+    name: ""
+    kind: ""
+    phases:
+      - func: KubeExec
+        name: lockMongo
+        objects:
+          mongoDbSecret:
+            apiVersion: ""
+            group: ""
+            resource: ""
+            kind: Secret
+            name: "{{ .Object.metadata.name }}"
+            namespace: "{{ .Deployment.Namespace }}"
+        args:
+          command:
+            - bash
+            - -o
+            - errexit
+            - -o
+            - pipefail
+            - -c
+            - >
+              export MONGODB_ROOT_PASSWORD='{{ index
+              .Phases.lockMongo.Secrets.mongoDbSecret.Data
+              "mongodb-root-password" | toString }}'
+
+              mongosh --authenticationDatabase admin -u root -p "${MONGODB_ROOT_PASSWORD}" --eval="db.fsyncLock()"
+          container: mongodb
+          namespace: "{{ .Deployment.Namespace }}"
+          pod: "{{ index .Deployment.Pods 0 }}"
