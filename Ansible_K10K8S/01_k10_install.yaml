@@ -1,0 +1,446 @@
+---
+- name: K10 Deploy
+  hosts: localhost
+  vars_files:
+    - vars/vault_vars.yaml
+  vars:
+    helm_chart_url: "https://charts.kasten.io/"
+  collections:
+    - kubernetes.core
+  tasks:
+# Creating the namespace in the kubernete cluster
+    - name: Create Kasten K10 namespace
+      k8s:
+        name: kasten-io # defining the namespace
+        api_version: v1
+        kind: Namespace
+        state: present
+        
+# Adding Helm repository for Kasten K10
+    - name: Add Kasten helm repo
+      kubernetes.core.helm_repository:
+        name: kasten
+        state: present
+        repo_url: '{{ helm_chart_url }}'
+      register: helmrepo
+
+# Installing Kasten K10 for AWS EKS
+    - name: Install Kasten K10 chart
+      kubernetes.core.helm:
+        name: k10
+        namespace: kasten-io
+        chart_ref: kasten/k10
+        wait: True
+        state: present
+        values:
+            secrets:
+                awsAccessKeyId: "{{ aws_access_key_id }}"
+                awsSecretAccessKey: "{{ aws_secret_access_key }}"
+            externalGateway:
+                create: true
+            auth:
+                basicAuth:
+                    enabled: true
+                    htpasswd: "{{ LOGIN }}"
+            ingress:
+                create: true
+                host: "{{ ingress_host }}"
+                pathType: Prefix
+                urlPath: "/k10"
+
+#  Accept EULA
+    - name: Accept Kasten EULA
+      k8s:
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: k10-eula-info
+            namespace: kasten-io
+          data:
+            accepted: "true"
+            company: '{{ company }}'
+            email: '{{ email }}'
+
+# Creating an Location Profile Secret
+    - name: CREATE AWS S3 SECRET
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+          apiVersion: v1
+          kind: Secret
+          type: secrets.kanister.io/aws             
+          metadata:
+            name: "k10-s3-{{ bucket_name }}-secret"
+            namespace: kasten-io     
+          data:
+            aws_access_key_id: "{{ aws_access_key_id|b64encode }}"
+            aws_secret_access_key: "{{ aws_secret_access_key|b64encode }}"            
+            
+
+# Creating an Location Profile 
+    - name: Creating an Location Profile with DR Data
+      kubernetes.core.k8s:
+        state: present
+        definition: 
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Profile
+            metadata:
+              name: "profile-s3-{{ bucket_name }}"
+              namespace: kasten-io
+            spec:
+              type: Location
+              locationSpec:
+                credential:
+                  secretType: AwsAccessKey
+                  secret:
+                    apiVersion: v1
+                    kind: Secret
+                    name: "k10-s3-{{ bucket_name }}-secret"
+                    namespace: kasten-io
+                type: ObjectStore
+                objectStore:
+                  name: "{{ bucket_name }}"
+                  objectStoreType: S3
+                  region: "{{ bucket_region }}"
+                  endpoint: "{{ endpoint }}"
+
+# Create Policy presets
+    - name: Create Policy Presets from Files
+      kubernetes.core.k8s:
+        definition: "{{ lookup('template', '{{ item }}') | from_yaml }}"
+      with_fileglob:
+          - "policypresets/*.yaml"
+
+# Create Backup Policy for Cluster-wide resources
+    - name: "Create policy for cluster-wide resources"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: Policy
+            metadata:
+              name: cluster-backup
+              namespace: kasten-io
+            spec:
+              comment: Backup Policy
+              presetRef:
+                name: silver-policy-preset
+                namespace: kasten-io
+              actions:
+              - action: backup
+              selector:
+                matchExpressions:
+                - key: k10.kasten.io/appNamespace
+                  operator: In
+                  values:
+                  - kasten-io-cluster                
+
+#Create TransformSet
+    - name: "Create sample TransformSet"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            kind: TransformSet
+            apiVersion: config.kio.kasten.io/v1alpha1
+            metadata:
+              name: dr-transforms
+              namespace: kasten-io
+            spec:
+              comment: |
+                Modify the storageClass to change storage tier.
+              transforms:
+                - subject:
+                    resource: persistentvolumeclaims
+                  name: ChangeStorageClass
+                  json:
+                    - op: replace
+                      path: /spec/storageClassName
+                      value: standard-csi
+                - subject:
+                    resource: deployments
+                  name: ScaleDeployment
+                  json:
+                    - op: replace
+                      path: /spec/replicas
+                      value: 1                      
+
+#Create BluePrint App Consistent Backups
+    - name: Create Kanister Blueprint for MongoDB Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mongodb_hook_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for MongoDB Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mongodb_hook_bp_statefulset.yaml        
+
+    - name: Create Kanister Blueprint for PostgreSQL Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/postgresql_hook_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for PostgreSQL Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/postgresql_hook_bp_statefulset.yaml
+
+    - name: Create Kanister Blueprint for MariaDB Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mariadb_dump_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for MariaDB Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mariadb_dump_bp_statefulset.yaml
+
+    - name: Create Kanister Blueprint for MySQL Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mysql_lock_bp_deployment.yaml
+
+    - name: Create Kanister Blueprint for MySQL Statefulset
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/mysql_lock_bp_statefulset.yaml        
+
+#Create BluePrintBinding
+    - name: "Create BluePrintBinding for MariaDB Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mariadb-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mariadb-blueprint-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mariadb"
+ 
+    - name: "Create BluePrintBinding for MariaDB Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mariadb-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mariadb-blueprint-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployments
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mariadb"
+
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mongodb-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mongo-hooks-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mongodb"
+         
+
+    - name: "Create BluePrintBinding for MongoDB Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mongodb-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mongo-hooks-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployments
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mongodb"
+
+    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-postgress-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: postgresql-hooks-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "postgresql"
+
+
+    - name: "Create BluePrintBinding for PostgreSQL Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-postgress-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: postgresql-hooks-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployment
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "postgresql"
+
+
+    - name: "Create BluePrintBinding for MySQL Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mysql-statefulset
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mysql-lock-statefulset
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mysql"
+
+
+    - name: "Create BluePrintBinding for MySQL Consistent Backup - deployment"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mysql-deployment
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: mysql-lock-deployment
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: deployment
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mysql"
+
+
