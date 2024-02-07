@@ -67,8 +67,8 @@
             name: "k10-wasabi-{{ bucket_namewasabi }}-secret"
             namespace: kasten-io     
           data:
-            wasabi_access_key_id: "{{ wasabi_access_key_id|b64encode }}"
-            wasabi_secret_access_key: "{{ wasabi_secret_access_key|b64encode }}"            
+            aws_access_key_id: "{{ wasabi_access_key_id|b64encode }}"
+            aws_secret_access_key: "{{ wasabi_secret_access_key|b64encode }}"            
             
 
     - name: Creating an Location Profile
@@ -81,21 +81,21 @@
               name: "profile-wasabi-{{ bucket_namewasabi }}"
               namespace: kasten-io
             spec:
-              type: Location
               locationSpec:
+                type: ObjectStore
+                objectStore:
+                  endpoint: "{{ wasabi_endpoint }}"
+                  name: "{{ bucket_namewasabi }}"
+                  objectStoreType: S3
+                  region: "{{ bucket_regionwasabi }}"
                 credential:
                   secretType: AwsAccessKey
                   secret:
                     apiVersion: v1
-                    kind: Secret
+                    kind: secret
                     name: "k10-wasabi-{{ bucket_namewasabi }}-secret"
                     namespace: kasten-io
-                    endpoint: "{{ wasabi_endpoint }}"
-                type: ObjectStore
-                objectStore:
-                  name: "{{ bucket_namewasabi }}"
-                  objectStoreType: S3
-                  region: "{{ bucket_regionwasabi }}"                                                
+              type: Location                                          
 
 # Create Policy presets
     - name: Create Policy Presets from Files
