@@ -1,0 +1,9 @@
+company:   "Demolab" #Company name for EULA
+email:   "pcerda@demolab.com"     #E-Mail address for EULA
+ingress_host: "k10.k8s.demolab.com"  # Ingress host dns name
+endpoint: "http://minio.demolab.com:9000"  # S3 Compatible provider endpoint
+bucket_name:   "test-k10"  #Bucket to be used as Location Profile
+bucket_region:   ""  #Bucket region
+aws_access_key_id: "admin"  # Access Key to add S3 Compatible bucket
+aws_secret_access_key: "password" # Secret Access Key to add S3 Compatible bucket
+LOGIN: "admin:$apr1$5CZjBl.e$nJHCD0LF5a0XbTEW3ycPN." #For K10 Basic Authentication.  Use 'htpasswd -n admin' and provide a password to autenticate to Kasten K10

@@ -1,0 +1,34 @@
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: PolicyPreset
+metadata:
+  name: silver-policy-preset
+  namespace: kasten-io
+spec:
+  comment: Policy preset for silver backup
+  backup:
+    frequency: "@daily"
+    backupWindow:
+      start:
+        hour: 22
+        minute: 30
+      end:
+        hour: 7
+        minute: 0
+    retention:
+      daily: 7
+      weekly: 0
+      monthly: 0
+      yearly: 0
+    profile:
+      name: "profile-s3-{{ bucket_name }}"
+      namespace: kasten-io
+  export:
+    profile:
+      name: "profile-s3-{{ bucket_name }}"
+      namespace: kasten-io
+    retention:
+      daily: 7
+      weekly: 4
+      monthly: 6
+    exportData:
+      enabled: true      
