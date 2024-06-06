@@ -1,7 +1,7 @@
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
-  name: mysql-lock-deployment
+  name: bp-mysql-lock
   namespace: kasten-io  
 actions:
   backupPrehook:
@@ -11,16 +11,16 @@ actions:
       objects:
         mysqlSecret:
           kind: Secret
-          name: '{{ .Deployment.Name }}'
-          namespace: '{{ .Deployment.Namespace }}'
+          name: '{{ .StatefulSet.Name }}'
+          namespace: '{{ .StatefulSet.Namespace }}'
       args:
         operation: create
-        namespace: "{{ .Deployment.Namespace }}"
+        namespace: "{{ .StatefulSet.Namespace }}"
         spec: |-
           apiVersion: v1
           kind: Pod
           metadata:
-            name: "{{ .Deployment.Name }}-lock"
+            name: "{{ .StatefulSet.Name }}-lock"
           spec:
             restartPolicy: Never
             containers:
@@ -34,7 +34,7 @@ actions:
               - -c
               - |
                 export MYSQL_ROOT_PASSWORD='{{ index .Phases.createLock.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}'
-                mysql --user=root --password=${MYSQL_ROOT_PASSWORD} -h '{{ .Deployment.Name }}' --execute="FLUSH TABLES WITH READ LOCK; select sleep(120);"
+                mysql --user=root --password=${MYSQL_ROOT_PASSWORD} -h '{{ .StatefulSet.Name }}' --execute="FLUSH TABLES WITH READ LOCK; select sleep(120);"
   backupPosthook:
     phases:
     - func: KubeOps
@@ -44,5 +44,5 @@ actions:
         objectReference:
           apiVersion: "v1"
           resource: "pods"
-          name: "{{ .Deployment.Name }}-lock"
-          namespace: '{{ .Deployment.Namespace }}'
+          name: "{{ .StatefulSet.Name }}-lock"
+          namespace: '{{ .StatefulSet.Namespace }}'

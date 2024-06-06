@@ -1,7 +1,7 @@
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
-  name: postgresql-hooks-statefulset
+  name: bp-postgresql-dump
   namespace: kasten-io  
 actions:
   backup:
