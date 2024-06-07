@@ -173,12 +173,51 @@
         state: present
         src: blueprints/bp-mariadb-dump.yaml
 
-    - name: Create Kanister Blueprint for MySQL Statefulset
+    - name: Create Kanister Blueprint for MySQL Lock
       kubernetes.core.k8s:
         state: present
-        src: blueprints/bp-mysql-lock.yaml        
+        src: blueprints/bp-mysql-lock.yaml
+
+    - name: Create Kanister Blueprint for MySQL Dump
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/bp-mysql-dump.yaml
+
+    - name: Create Kanister Blueprint for ElasticSearch Dump
+      kubernetes.core.k8s:
+        state: present
+        src: blueprints/bp-elasticsearch-dump.yaml        
 
 #Create BluePrintBinding
+    - name: "Create BluePrintBinding for ElasticSearch Consistent Backup - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-elasticsearch-dump
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: bp-elasticsearch-dump
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "elasticsearch"
+
     - name: "Create BluePrintBinding for MariaDB Consistent Backup - statefulset"
       kubernetes.core.k8s:
         state: present
@@ -266,7 +305,7 @@
                       values:
                         - "postgresql"
 
-    - name: "Create BluePrintBinding for MySQL Consistent Backup - statefulset"
+    - name: "Create BluePrintBinding for MySQL Lock - statefulset"
       kubernetes.core.k8s:
         state: present
         definition:
@@ -293,4 +332,33 @@
                       key: database-type
                       operator: In
                       values:
-                        - "mysql"
+                        - "mysql-lock"
+
+    - name: "Create BluePrintBinding for MySQL Dump - statefulset"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+            apiVersion: config.kio.kasten.io/v1alpha1
+            kind: BlueprintBinding
+            metadata:
+              name: bpb-mysql-dump
+              namespace: kasten-io
+            spec:
+              blueprintRef:
+                name: bp-mysql-dump
+                namespace: kasten-io
+              resources:
+                matchAll:
+                  - type:
+                      operator: In
+                      values:
+                        - group: apps
+                          resource: statefulsets
+                  - annotations:
+                      key: kanister.kasten.io/blueprint
+                      operator: DoesNotExist
+                  - labels:
+                      key: database-type
+                      operator: In
+                      values:
+                        - "mysql-dump"
